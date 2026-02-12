@@ -162,9 +162,7 @@ rf_probs <- predict(rf_model, newdata = test_rf, type = "prob")[, "1"]
 # Add this to your libraries ----------------------------------------------------
 
 
-# -----------------------------------------------------------------------------#
-# AUC + ROC CURVES (Logistic Regression + Random Forest)
-# -----------------------------------------------------------------------------#
+# 9. AUC + ROC CURVES (Logistic Regression + Random Forest) ---------------------
 
 # --- Logistic Regression ROC/AUC ---
 # glm_probs already created above: predict(long_hits_glm, newdata = test_data, type="response")
