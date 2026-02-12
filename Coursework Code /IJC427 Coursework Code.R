@@ -18,10 +18,10 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("lag",    "dplyr")
 
 # 2. DATA IMPORT ----------------------------------------------------------------
-song_pop          <- readr::read_csv("~/Documents/R/musicoset_popularity 4/song_pop.csv")
-songs             <- readr::read_csv("~/Documents/R/musicoset_metadata 4/songs.csv")
-acoustic_features <- readr::read_csv("~/Documents/R/musicoset_songfeatures 8/acoustic_features.csv")
-song_chart        <- readr::read_csv("~/Documents/R/musicoset_popularity 4/song_chart.csv")
+song_pop          <- read.delim2("~/Documents/R/musicoset_popularity 4/song_pop.csv")
+songs             <- read.delim2("~/Documents/R/musicoset_metadata 4/songs.csv")
+acoustic_features <- read.delim2("~/Documents/R/musicoset_songfeatures 8/acoustic_features.csv")
+song_chart        <- read.delim2("~/Documents/R/musicoset_popularity 4/song_chart.csv")
 
 # 3. DATA PREPARATION -----------------------------------------------------------
 musicdata <- song_pop %>%
@@ -37,10 +37,23 @@ longevity <- musicdata %>%
   left_join(songs %>% select(song_id, song_name, artists), by = "song_id") %>%
   relocate(song_id, song_name, artists)
 
-# Log transforms (do this ONCE)
+# Log transforms
+class(longevity$instrumentalness)
+
 longevity <- longevity %>%
-  mutate(log_instrumentalness = log(instrumentalness + 1e-5),
-         log_speechiness      = log(speechiness + 1e-5))
+  mutate(
+    instrumentalness = as.numeric(instrumentalness),
+    speechiness      = as.numeric(speechiness))
+
+longevity <- longevity %>%
+  mutate(
+    instrumentalness = as.numeric(as.character(instrumentalness)),
+    speechiness      = as.numeric(as.character(speechiness)))
+
+longevity <- longevity %>%
+  mutate(
+    log_instrumentalness = log(instrumentalness + 0.00001),
+    log_speechiness      = log(speechiness + 0.00001))
 
 # 4. EXPLORATORY DATA ANALYSIS (EDA) --------------------------------------------
 summary(longevity)
@@ -57,20 +70,26 @@ hit_labels <- function(x) factor(x, levels = c(0, 1), labels = c("One-Year Hits"
 # Class distribution plot
 ggplot(longevity, aes(x = hit_labels(long_hits), fill = hit_labels(long_hits))) +
   geom_bar(aes(y = (..count..) / sum(..count..)), width = 0.6) +
-  geom_text(aes(y = (..count..) / sum(..count..),
-                label = scales::percent((..count..) / sum(..count..), accuracy = 0.1)),
-            stat = "count", vjust = -0.5, size = 4, fontface = "bold") +
-  scale_y_continuous(labels = scales::percent_format(),
-                     expand = expansion(mult = c(0, 0.1))) +
-  labs(title = "Class Distribution: One-Year Hits vs Long-Term Hits",
-       x = "Hit Status", y = "Percentage (%) of Songs") +
+  geom_text(
+    aes(
+      y = (..count..) / sum(..count..),
+      label = scales::percent((..count..) / sum(..count..), accuracy = 0.1)),
+    stat = "count", vjust = -0.5, size = 4, fontface = "bold") +
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Class Distribution: One-Year Hits vs Long-Term Hits",
+    x = "Hit Status",
+    y = "Percentage (%) of Songs") +
   theme_minimal() +
-  theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x = element_text(size = 12, margin = margin(t = 10)),
-        axis.text.x  = element_text(size = 12, margin = margin(t = 9)),
-        axis.title.y = element_text(size = 12, margin = margin(r = 10)),
-        axis.text.y  = element_text(size = 12, margin = margin(r = 6)))
+  theme(
+    legend.position = "none",
+    plot.title   = element_text(hjust = 0.5),
+    axis.title.x = element_text(size = 12, margin = ggplot2::margin(t = 10)),
+    axis.text.x  = element_text(size = 12, margin = ggplot2::margin(t = 9)),
+    axis.title.y = element_text(size = 12, margin = ggplot2::margin(r = 10)),
+    axis.text.y  = element_text(size = 12, margin = ggplot2::margin(r = 6)))
 
 # Histogram distributions (raw)
 longevity %>%
@@ -85,14 +104,20 @@ longevity %>%
   theme(plot.title = element_text(hjust = 0.5))
 
 # Histogram distributions 
+
+audio_cols <- c("danceability","energy","valence","tempo","loudness",
+  "acousticness","instrumentalness","liveness","speechiness")
+
 longevity %>%
-  select(log_instrumentalness, log_speechiness) %>%
-  pivot_longer(everything(), names_to = "feature", values_to = "value") %>%
+  mutate(across(all_of(audio_cols), ~ as.numeric(as.character(.x)))) %>%  # force numeric
+  pivot_longer(cols = all_of(audio_cols), names_to = "feature", values_to = "value") %>%
   ggplot(aes(x = value)) +
   geom_histogram(bins = 30) +
   facet_wrap(~feature, scales = "free") +
-  labs(title = "Histogram Distributions (Log-Transformed Features)",
-       x = "Value", y = "Count") +
+  labs(
+    title = "Histogram Distributions for Acoustic Features",
+    x = "Value", y = "Count"
+  ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -159,10 +184,10 @@ conf_matrix
 # Probabilities for class "1" (Long-Term Hits)
 rf_probs <- predict(rf_model, newdata = test_rf, type = "prob")[, "1"]
 
-# Add this to your libraries ----------------------------------------------------
 
-
-# 9. AUC + ROC CURVES (Logistic Regression + Random Forest) ---------------------
+# -----------------------------------------------------------------------------#
+# AUC + ROC CURVES (Logistic Regression + Random Forest)
+# -----------------------------------------------------------------------------#
 
 # --- Logistic Regression ROC/AUC ---
 # glm_probs already created above: predict(long_hits_glm, newdata = test_data, type="response")
@@ -184,4 +209,5 @@ auc_rf
 plot(roc_rf, main = paste0("ROC Curve (Random Forest) | AUC = ", round(as.numeric(auc_rf), 3)))
 
 
+ 
  
