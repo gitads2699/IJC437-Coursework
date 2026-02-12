@@ -17,6 +17,7 @@
 ![GitHub](https://img.shields.io/badge/GitHub-100000?style=flat&logo=github&logoColor=white)
 
 **Languages:** R, SPSS, SQL
+
 **Visualization:** ggplot2, PowerPoint, Excel  
 **ML:** Regression and Classification  
 
