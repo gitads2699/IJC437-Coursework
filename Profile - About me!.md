@@ -5,7 +5,7 @@
 
 ## 🎯 About Me
 - MSc Data Science student at the University of Sheffield
-- Specialising in Supervised Learning
+- Specialising in Supervised Machine Learning
 - Current project: **Music hit prediction using Binary Regression + Random Forest** [IJC437]
 - Learning: R, SPSS
 
